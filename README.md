@@ -1,4 +1,4 @@
-# 🛡 ML Phishing Email Detector
+#  ML Phishing Email Detector
 
 Este es un proyecto de detección de correos electrónicos tipo phishing usando Machine Learning con Python.
 
@@ -13,7 +13,7 @@ Analiza el contenido de un correo electrónico y predice si es un mensaje legít
 - scikit-learn (Naive Bayes)
 - CountVectorizer (para convertir texto a números)
 
-## 🗂 Archivos
+##  Archivos
 
 - `phishing_detector.py` – Código principal
 - `requirements.txt` – Lista de paquetes necesarios
