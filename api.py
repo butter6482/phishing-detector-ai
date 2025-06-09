@@ -3,7 +3,7 @@ from flask_cors import CORS
 import joblib
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
+import openai  # Usamos el cliente clásico
 
 # Inicializar Flask
 app = Flask(__name__)
@@ -15,7 +15,7 @@ vectorizer = joblib.load("vectorizer.pkl")
 
 # Cargar clave de OpenAI
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Ruta principal
 @app.route("/", methods=["GET"])
@@ -54,15 +54,15 @@ def explain():
     system_prompt = """Eres un experto en análisis de correos electrónicos. Tu tarea es determinar si un mensaje es phishing o legítimo, basándote en pruebas concretas. Sé neutral y no marques como phishing a menos que haya señales claras. Si no estás seguro, indícalo y sugiere cómo verificar el mensaje de forma segura."""
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.4
         )
-        explanation = response.choices[0].message.content
+        explanation = response.choices[0].message["content"]
         return jsonify({"explanation": explanation})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
