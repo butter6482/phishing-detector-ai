@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      - name: Run tests
+        env:
+          UNIT_TESTS: "1"
+          RUN_STREAMLIT_UI: "0"
+          USE_OPENROUTER: "true"
+          OPENROUTER_API_KEY: "dummy"
+          OPENAI_API_KEY: "dummy"
+          GOOGLE_SAFE_BROWSING_KEY: "dummy"
+        run: |
+          python -m pytest --cov=. --cov-config=.coveragerc --cov-report=term

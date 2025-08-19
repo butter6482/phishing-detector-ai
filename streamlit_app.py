@@ -1,22 +1,27 @@
 import streamlit as st
 import os
+import re
+import json
 import joblib
 import requests
-from openai import OpenAI
 from dotenv import load_dotenv
-from textos import textos
+from textos import textos  # asumimos que ya lo tienes
 
-# Selección de idioma
-idioma = st.selectbox("🌐 Selecciona idioma / Select language", ["Español", "English"])
-t = textos[idioma]
-
-# Cargar variables de entorno
+# ========================
+# Configuración / helpers
+# ========================
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Cargar modelo local y vectorizador
-model = joblib.load("modelo_entrenado.pkl")
-vectorizer = joblib.load("vectorizer.pkl")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GOOGLE_SAFE_BROWSING_KEY = os.getenv("GOOGLE_SAFE_BROWSING_KEY")
+OPENROUTER_URL = "https://api.openrouter.ai/v1/chat/completions"
+LLM_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct")
+
+# Umbrales
+LOW_CONF = 0.4
+HIGH_CONF = 0.6
+STRONG_LOW = 0.2
+STRONG_HIGH = 0.8
 
 # Palabras clave sospechosas
 palabras_clave = {
@@ -30,120 +35,206 @@ palabras_clave = {
     ]
 }
 
-# Función para verificar URLs con Google Safe Browsing
-def verificar_urls_con_google(texto):
-    api_key = os.getenv("GOOGLE_SAFE_BROWSING_KEY")
-    url_api = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}"
-    urls_encontradas = [word for word in texto.split() if word.startswith("http")]
-    urls_maliciosas = []
+# Cargar modelo local y vectorizador (NB)
+# cachea para evitar recarga en cada rerun
+@st.cache_resource
+def _load_assets():
+    model = joblib.load("modelo_entrenado.pkl")
+    vectorizer = joblib.load("vectorizer.pkl")
+    return model, vectorizer
 
-    for url in urls_encontradas:
-        body = {
-            "client": {"clientId": "phishing-detector", "clientVersion": "1.0"},
-            "threatInfo": {
-                "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-                "platformTypes": ["ANY_PLATFORM"],
-                "threatEntryTypes": ["URL"],
-                "threatEntries": [{"url": url}]
-            }
+model, vectorizer = _load_assets()
+
+def nb_predict(texto: str):
+    X = vectorizer.transform([texto])
+    proba = model.predict_proba(X)[0]   # [prob_legit, prob_phish] si entrenaste así
+    try:
+        idx_phish = list(getattr(model, "classes_", [0,1])).index(1)
+    except ValueError:
+        import numpy as np
+        idx_phish = int(proba.argmax())
+    phish_score = float(proba[idx_phish])
+    label = "phishing" if phish_score >= 0.5 else "legit"
+    return phish_score, label
+
+def find_urls(texto: str):
+    url_pattern = re.compile(r"(https?://[^\s)>\]]+)", re.IGNORECASE)
+    return url_pattern.findall(texto)
+
+def verificar_urls_con_google(texto: str):
+    if not GOOGLE_SAFE_BROWSING_KEY:
+        return [], "⚠️ Falta GOOGLE_SAFE_BROWSING_KEY en .env"
+    urls = find_urls(texto)
+    if not urls:
+        return [], None
+
+    url_api = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={GOOGLE_SAFE_BROWSING_KEY}"
+    body = {
+        "client": {"clientId": "phishing-detector", "clientVersion": "1.0"},
+        "threatInfo": {
+            "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+            "platformTypes": ["ANY_PLATFORM"],
+            "threatEntryTypes": ["URL"],
+            "threatEntries": [{"url": u} for u in urls]
         }
-        response = requests.post(url_api, json=body)
-        if response.json().get("matches"):
-            urls_maliciosas.append(url)
+    }
+    try:
+        r = requests.post(url_api, json=body, timeout=12)
+        r.raise_for_status()
+        matches = r.json().get("matches", []) or []
+        malos = sorted({m["threat"]["url"] for m in matches})
+        return malos, None
+    except Exception as e:
+        return [], f"Error verificando URLs: {e}"
 
-    return urls_maliciosas
+def llm_analyze(texto: str, idioma: str):
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("Falta OPENROUTER_API_KEY en .env")
 
-# Interfaz Streamlit
-st.title(t["titulo"])
-st.write(t["instruccion"])
-
-# INPUT DEL USUARIO
-user_input = st.text_area(t["mensaje"])
-
-# Solo se ejecuta si se aprieta el botón
-if st.button(t["boton"]):
-    if user_input.strip() == "":
-        st.warning(t["advertencia_vacio"])
+    if idioma == "Español":
+        system_prompt = (
+            "Eres un analista de seguridad. Devuelve SOLO un JSON válido con claves: "
+            "label ('phishing'|'legit'|'uncertain'), score (0..1), reasons (lista de texto), "
+            "explanation (breve en ESPAÑOL). No agregues texto fuera del JSON."
+        )
+        user_prompt = f"Analiza este texto y decide si es phishing o legítimo:\n```\n{texto}\n```"
     else:
-        # 1. Clasificación con modelo local
-        input_vector = vectorizer.transform([user_input])
-        prediction = model.predict(input_vector)[0]
-        proba = model.predict_proba(input_vector)[0]
-        st.write(f'{t["confianza"]} {max(proba) * 100:.2f}%')
+        system_prompt = (
+            "You are a security analyst. Return ONLY valid JSON with keys: "
+            "label ('phishing'|'legit'|'uncertain'), score (0..1), reasons (string list), "
+            "explanation (short in ENGLISH). Do not add any text outside the JSON."
+        )
+        user_prompt = f"Analyze this text and decide phishing vs legit:\n```\n{texto}\n```"
 
-        # 2. Palabras clave encontradas
-        encontradas = [p for p in palabras_clave[idioma] if p.lower() in user_input.lower()]
-        st.markdown(t["palabras_clave"])
-        st.info(", ".join(encontradas) if encontradas else t["no_claves"])
+    body = {
+        "model": LLM_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.2
+    }
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    r = requests.post(OPENROUTER_URL, headers=headers, json=body, timeout=30)
+    r.raise_for_status()
+    content = r.json()["choices"][0]["message"]["content"].strip()
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", content, re.DOTALL)
+        if not match:
+            raise
+        data = json.loads(match.group(0))
+    # normaliza
+    data["label"] = data.get("label", "uncertain")
+    try:
+        s = float(data.get("score", 0.5))
+    except Exception:
+        s = 0.5
+    data["score"] = max(0.0, min(1.0, s))
+    if not isinstance(data.get("reasons"), list):
+        data["reasons"] = []
+    data["explanation"] = data.get("explanation", "")
+    return data
 
-        # 3. Preparar prompts para OpenAI
-        if idioma == "Español":
-            prompt = f"""Analiza el siguiente mensaje cuidadosamente. ¿Es un mensaje de phishing o es legítimo? Justifica tu análisis sin asumir que es falso solo por precaución. Considera el lenguaje, los enlaces, el tono, el remitente y el contenido del mensaje:\n\n{user_input}"""
-            system_prompt = """Eres un experto en análisis de correos electrónicos. Tu tarea es determinar si un mensaje es phishing o legítimo, basándote en pruebas concretas. Sé neutral y no marques como phishing a menos que haya señales claras. Si no estás seguro, indícalo y sugiere cómo verificar el mensaje de forma segura."""
+def fusion(nb_score: float, nb_label: str, llm_res: dict | None):
+    decision = {
+        "engine": "nb",
+        "label": nb_label,
+        "score": nb_score,
+        "explanation": None,
+        "reasons": []
+    }
+    if nb_score <= STRONG_LOW or nb_score >= STRONG_HIGH:
+        return decision
+
+    if LOW_CONF <= nb_score <= HIGH_CONF and llm_res:
+        decision.update({
+            "engine": "llm",
+            "label": llm_res.get("label", nb_label),
+            "score": llm_res.get("score", nb_score),
+            "explanation": llm_res.get("explanation"),
+            "reasons": llm_res.get("reasons", [])
+        })
+        return decision
+
+    if llm_res:
+        llm_label = llm_res.get("label", nb_label)
+        llm_score = llm_res.get("score", nb_score)
+        if (nb_label != llm_label) and (abs(llm_score - nb_score) >= 0.25):
+            decision.update({
+                "engine": "hybrid_disagree",
+                "label": "suspicious",
+                "score": max(nb_score, llm_score),
+                "explanation": llm_res.get("explanation"),
+                "reasons": llm_res.get("reasons", [])
+            })
+    return decision
+
+# ========================
+#         UI (guardia)
+# ========================
+if os.getenv("RUN_STREAMLIT_UI", "1") == "1":
+    idioma = st.selectbox("🌐 Selecciona idioma / Select language", ["Español", "English"])
+    t = textos[idioma]
+
+    st.title(t["titulo"])
+    st.write(t["instruccion"])
+    user_input = st.text_area(t["mensaje"])
+
+    if st.button(t["boton"]):
+        if user_input.strip() == "":
+            st.warning(t["advertencia_vacio"])
         else:
-            prompt = f"""Carefully analyze the following message. Is it a phishing message or is it legitimate? Justify your analysis without assuming it's fake just out of caution. Consider the language, links, tone, sender, and content of the message:\n\n{user_input}"""
-            system_prompt = """You are an expert in email analysis. Your task is to determine whether a message is phishing or legitimate based on concrete evidence. Be neutral and do not label something as phishing unless there are clear signs. If you're unsure, state that and suggest how to safely verify the message."""
+            # 1) NB
+            nb_score, nb_label = nb_predict(user_input)
+            st.write(f'{t["confianza"]} {nb_score * 100:.2f}% (NB)')
 
-        # 4. Explicación extendida con OpenAI
-        try:
-            st.markdown(t["explicacion_ia"])
-            with st.spinner("Consultando IA..."):
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.4
-                )
-                explanation = response.choices[0].message.content
+            # 2) Palabras clave (simple)
+            encontradas = [p for p in palabras_clave[idioma] if p.lower() in user_input.lower()]
+            st.markdown(t["palabras_clave"])
+            st.info(", ".join(encontradas) if encontradas else t["no_claves"])
 
-                # Mostrar mensaje final basado en la explicación de IA
-                explanation_lower = explanation.lower()
-                if any(frase in explanation_lower for frase in [
-                    # Español
-                    "es un intento de phishing",
-                    "hay múltiples señales claras de phishing",
-                    "hay varias señales de alerta",
-                    "este mensaje es sospechoso",
-                    "no es seguro hacer clic",
-                    # Inglés
-                    "it is a phishing attempt",
-                    "phishing attempt",
-                    "strongly suggest it is phishing",
-                    "highly likely that this message is a phishing attempt",
-                    "this message is suspicious",
-                    "this is suspicious",
-                    "not safe to click"
-                ]):
-                    st.error("🚨 El mensaje parece ser phishing o spam.")
-                elif any(frase in explanation_lower for frase in [
-                    # Español
-                    "no se puede confirmar que sea phishing",
-                    "podría ser legítimo",
-                    "se recomienda precaución",
-                    # Inglés
-                    "cannot be definitively confirmed",
-                    "may be legitimate",
-                    "exercise caution",
-                    "could be legitimate",
-                    "might be legitimate"
-                ]):
-                    st.warning("⚠️ El mensaje presenta señales sospechosas, pero no se puede confirmar que sea phishing.")
-                else:
-                    st.success("✅ El mensaje parece legítimo.")
+            # 3) LLM solo si zona gris
+            llm_res = None
+            if LOW_CONF <= nb_score <= HIGH_CONF:
+                try:
+                    st.markdown(t["explicacion_ia"])
+                    with st.spinner("Consultando IA (OpenRouter)…"):
+                        llm_res = llm_analyze(user_input, idioma)
+                except Exception as e:
+                    st.warning(t["error_openai"])
+                    st.text(str(e))
 
+            # 4) Fusión
+            decision = fusion(nb_score, nb_label, llm_res)
+
+            # 5) Mostrar resultado
+            final_label = decision["label"]
+            if final_label == "phishing":
+                st.error("🚨 El mensaje parece **phishing**.")
+            elif final_label in ("suspicious", "uncertain"):
+                st.warning("⚠️ El mensaje es **sospechoso**; procede con precaución.")
+            else:
+                st.success("✅ El mensaje parece **legítimo**.")
+
+            if decision.get("explanation"):
                 st.success(t["explicacion_generada"])
-                st.info(explanation)
+                st.info(decision["explanation"])
+            if decision.get("reasons"):
+                st.markdown("**Razones / Reasons:**")
+                for r in decision["reasons"]:
+                    st.write(f"- {r}")
 
-        except Exception as e:
-            st.warning(t["error_openai"])
-            st.text(str(e))
-
-        # 5. Verificación de URLs maliciosas
-        maliciosas = verificar_urls_con_google(user_input)
-        st.markdown(t["verificacion_urls"])
-        if maliciosas:
-            st.error(f'{t["urls_maliciosas"]}\n\n{", ".join(maliciosas)}')
-        else:
-            st.info(t["urls_seguras"])
+            # 6) Verificación de URLs
+            st.markdown(t["verificacion_urls"])
+            urls_maliciosas, url_err = verificar_urls_con_google(user_input)
+            if url_err:
+                st.warning(url_err)
+            elif urls_maliciosas:
+                st.error(f'{t["urls_maliciosas"]}\n\n' + "\n".join(urls_maliciosas))
+            else:
+                st.info(t["urls_seguras"])
