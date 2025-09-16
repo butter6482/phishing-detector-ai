@@ -1,4 +1,3 @@
-@'
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
@@ -8,7 +7,7 @@ import joblib
 from pathlib import Path
 import sys
 
-# Ruta al CSV (ajústala si lo tienes en otra carpeta)
+
 CANDIDATE_PATHS = [
     Path("spam.csv"),
     Path("data/spam.csv"),
@@ -48,4 +47,3 @@ print(classification_report(y_test, y_pred, digits=3))
 joblib.dump(model, "modelo_entrenado.pkl")
 joblib.dump(vectorizer, "vectorizer.pkl")
 print("💾 Guardados: modelo_entrenado.pkl, vectorizer.pkl")
-'@ | Set-Content -Encoding UTF8 .\train_nb.py

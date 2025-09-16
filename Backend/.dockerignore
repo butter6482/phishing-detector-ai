@@ -1,10 +1,7 @@
-# Backend/.dockerignore
+.vscode
+.venv
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.log
-.vscode/
-.venv/
-.git/
-.env
+.git
