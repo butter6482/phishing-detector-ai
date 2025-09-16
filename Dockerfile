@@ -34,7 +34,7 @@ RUN python -m pip install --upgrade pip && pip install --no-cache-dir -r /app/re
 COPY Backend/ /app/
 
 # Frontend build -> nginx html
-RUN rm -f /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/conf.d/default.conf /etc/nginx/sites-enabled/default
 COPY --from=frontend-build /src-frontend/dist /usr/share/nginx/html
 
 # Nginx + Supervisor configs
@@ -42,10 +42,10 @@ COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Non-root user (optional)
-RUN useradd -m appuser || true
-USER appuser
+RUN useradd -m appuser || true \
+    && mkdir -p /var/cache/nginx /var/run/nginx \
+    && chown -R appuser:appuser /var/lib/nginx /var/log/nginx /var/cache/nginx /var/run/nginx /var/run
 
 EXPOSE 80
 
 CMD ["/usr/bin/supervisord","-n","-c","/etc/supervisor/conf.d/supervisord.conf"]
-
