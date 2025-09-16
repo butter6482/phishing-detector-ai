@@ -1,0 +1,49 @@
+/* PLEASE NOTE: THESE TAILWIND IMPORTS SHOULD NEVER BE DELETED */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+/* DO NOT DELETE THESE TAILWIND IMPORTS, OTHERWISE THE STYLING WILL NOT RENDER AT ALL */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+:root {
+  --color-bg: #FAFAFA;
+  --color-text: #180353;
+  --color-primary: #E16F45;
+  --color-accent: #09D2A3;
+  --color-border: #E5E7EB;
+  --radius: 8px;
+  --shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.dark {
+  --color-bg: #111827;
+  --color-text: #F9FAFB;
+  --color-border: #374151;
+  --shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Dark-mode readability: inputs/cards/borders */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #121218;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.dark .border {
+  border-color: var(--color-border) !important;
+}
+
+.dark .text-default {
+  color: var(--color-text);
+}

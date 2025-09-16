@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="720" height="480" viewBox="0 0 720 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phishing Detector security illustration">
+  <defs>
+    <linearGradient id="shieldGradient" x1="50" y1="40" x2="250" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5AC8FA"/>
+      <stop offset="100%" stop-color="#5856D6"/>
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="720" height="480" fill="#FFFFFF"/>
+  <!-- Shield icon -->
+  <g transform="translate(80,90)" filter="url(#shadow)">
+    <path d="M120 0C122.6 0 125.13 0.67 127.36 1.95L211.73 51.17C217.46 54.53 221 60.72 221 67.42V176.8C221 195.74 211.77 213.54 196.39 224.45C172.31 241.54 146.78 255.49 120.32 266.04C119.65 266.31 118.95 266.44 118.25 266.44C117.55 266.44 116.85 266.31 116.18 266.04C89.72 255.49 64.19 241.54 40.11 224.45C24.73 213.54 15.5 195.74 15.5 176.8V67.42C15.5 60.72 19.04 54.53 24.77 51.17L109.14 1.95C111.37 0.67 113.9 0 116.5 0H120Z" fill="url(#shieldGradient)"/>
+    <path d="M120 18L44 62V176.8C44 190.34 50.65 203.05 61.71 211.01C83.92 226.94 107.41 239.63 131.9 249.22C156.38 239.63 179.87 226.94 202.08 211.01C213.14 203.05 219.79 190.34 219.79 176.8V62L144 18H120Z" fill="white" opacity="0.18"/>
+  </g>
+  <!-- Wordmark -->
+  <g transform="translate(340,160)">
+    <text x="0" y="0" font-family="'Poppins', 'Segoe UI', Arial, sans-serif" font-size="56" font-weight="700" fill="#0F172A">Phishing</text>
+    <text x="0" y="68" font-family="'Poppins', 'Segoe UI', Arial, sans-serif" font-size="56" font-weight="700" fill="#0F172A">Detector</text>
+  </g>
+</svg>
+

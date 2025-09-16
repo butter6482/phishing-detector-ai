@@ -1,0 +1,76 @@
+﻿import { useState } from "react";
+import { analyzeText, AnalyzeResp } from "../lib/api";
+
+export default function Analyzer() {
+  const [text, setText] = useState("");
+  const [res, setRes] = useState<AnalyzeResp | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    try {
+      setErr(null);
+      setLoading(true);
+      const data = await analyzeText(text, "es");
+      setRes(data);
+    } catch (e: any) {
+      console.error("Analyze error:", e);
+      setErr(e?.message ?? "Network error");
+      setRes(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="grid md:grid-cols-2 gap-6" id="analyzer">
+      <div className="rounded-lg border p-4 bg-white dark:bg-neutral-900">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full min-h-[180px] rounded border p-3 bg-white dark:bg-neutral-800 dark:text-white"
+          placeholder="Paste the email content here..."
+        />
+        <button
+          onClick={submit}
+          disabled={loading}
+          className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white dark:text-white hover:opacity-90"
+        >
+          {loading ? "Analyzing..." : "Analyze"}
+        </button>
+        {err && (
+          <div className="mt-3 text-sm text-red-600 dark:text-red-400">{err}</div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="rounded-lg border p-4 bg-white dark:bg-neutral-900">
+          <div className="font-semibold dark:text-white">
+            {res ? (res.is_phishing ? "⚠️ Suspicious" : "✅ Safe") : "Result"}
+          </div>
+          <div className="mt-1 text-sm opacity-80 dark:text-neutral-300">
+            Score: {res ? Math.round(res.score * 100) : "-"} / 100
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {res?.keywords?.map((k) => (
+              <span
+                key={k}
+                className="text-xs px-2 py-1 rounded-full border dark:border-neutral-700 dark:text-neutral-200"
+              >
+                {k}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border p-4 bg-white dark:bg-neutral-900">
+          <div className="font-semibold mb-2 dark:text-white">AI Explanation</div>
+          <p className="text-sm leading-6 whitespace-pre-wrap dark:text-neutral-200">
+            {res?.explanation ?? "—"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+

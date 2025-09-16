@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic>=2.8,<3
+joblib
+scikit-learn
+python-dotenv
+httpx
+pillow
+pytesseract
+python-multipart
+
+uvicorn[standard]==0.30.*

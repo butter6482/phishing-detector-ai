@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: phishing-backend
+    env_file: ./.env
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: "http://localhost:8000"
+    container_name: phishing-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    image: phishing-backend
+    container_name: backend_app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    image: phishing-frontend
+    container_name: frontend_app
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
