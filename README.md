@@ -1,6 +1,6 @@
 🛡️ Phishing Detector — AI-powered email risk analyzer
 
-🔗 Live Demo
+https://phishing-detector-ai.onrender.com
 
 Phishing Detector analyzes suspicious emails and provides a clear verdict with AI-generated explanations. It combines a local Naive Bayes classifier, real-time URL validation, and an LLM to deliver simple, trustworthy insights.
 
