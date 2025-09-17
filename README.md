@@ -7,12 +7,19 @@ Phishing Detector analyzes suspicious emails and provides a clear verdict with A
 What’s included
 
 🔍 Local ML (Naive Bayes) to classify phishing vs legit.
+
 🧠 AI explanations via OpenRouter (summary + practical advice).
+
 🌐 Google Safe Browsing for real-time URL validation.
+
 📊 Risk score (0–100) with levels safe / warning / phishing.
+
 🎨 Modern React + Tailwind dashboard UI.
+
 ⚡ FastAPI backend with /api/analyze endpoint.
+
 🐳 Easy deployment with Docker + Render/Vercel.
+
 
 Stack
 
