@@ -1,73 +1,39 @@
-# Phishing Detector
+🛡️ Phishing Detector — AI-powered email risk analyzer
 
-Detecta intentos de phishing en texto. Calcula un puntaje de riesgo (0–100), nivel de riesgo (safe / warning / phishing), palabras clave sospechosas, reputación de URLs (Google Safe Browsing) y una explicación generada por LLM (OpenRouter, opcional).
+🔗 Live Demo
 
-## Backend (FastAPI)
+Phishing Detector analyzes suspicious emails and provides a clear verdict with AI-generated explanations. It combines a local Naive Bayes classifier, real-time URL validation, and an LLM to deliver simple, trustworthy insights.
 
-Rutas expuestas:
-- GET `/` → `{ "ok": true }`
-- GET `/health` → `{ "status": "ok" }`
-- POST `/analyze` → body `{ "message": string, "lang": "es"|"en" }`
+What’s included
 
-Respuesta:
+🔍 Local ML (Naive Bayes) to classify phishing vs legit.
+🧠 AI explanations via OpenRouter (summary + practical advice).
+🌐 Google Safe Browsing for real-time URL validation.
+📊 Risk score (0–100) with levels safe / warning / phishing.
+🎨 Modern React + Tailwind dashboard UI.
+⚡ FastAPI backend with /api/analyze endpoint.
+🐳 Easy deployment with Docker + Render/Vercel.
 
-```
-{
-  "nb": {"engine":"nb","label":"phishing|legit","phishing_score":0.42,"is_phishing":false,"confidence":"low","keywords":[]},
-  "llm": {"verdict":"phishing","explanation":"...","advice":"..."} | null,
-  "safebrowsing": {"urls": [...], "matches": [...], "has_threats": false},
-  "final": {"score": 78, "risk":"phishing", "is_phishing": true, "label":"phishing", "explanation":"...", "source":"openrouter:phishing"}
-}
-```
+Stack
 
-### Ejecutar localmente
+Frontend: React + Vite + Tailwind
 
-```
-cd Backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn api:app --host 127.0.0.1 --port 8000
-```
+Backend: FastAPI (Uvicorn)
 
-Docs: http://127.0.0.1:8000/docs
+ML: scikit-learn (Naive Bayes)
 
-## Frontend (Vite)
+LLM: OpenRouter
 
-```
-cd frontend
-npm install
-npm run dev
-# http://127.0.0.1:5173
-```
+Infra: Docker + Render
 
-Configura `VITE_API_URL` en `.env` del frontend si necesitas apuntar a otra URL del backend.
+How it works (flow)
 
-## Variables de entorno
+Paste the email content into the analyzer.
 
-Coloca estas variables en `.env` (en la raíz o en `Backend/`):
+The local model calculates score + suspicious keywords.
 
-```
-OPENROUTER_API_KEY=sk-or-xxxx
-OPENROUTER_MODEL=openai/gpt-3.5-turbo
-USE_OPENROUTER=true
-DECISION_UNCERTAIN_AS_PHISH=true
-GOOGLE_SAFE_BROWSING_KEY=AIzaSy...
-VITE_API_URL=http://127.0.0.1:8000
-```
+Google Safe Browsing checks URLs.
 
-## Docker Compose (más adelante)
+The LLM generates a concise explanation with recommendations.
 
-Se proveen `docker-compose.yml` y `docker-compose.dev.yml`. Una vez finalizada la configuración, ejecuta:
-
-```
-docker compose -f docker-compose.dev.yml up --build
-```
-
-## Tests
-
-Incluye pruebas para extracción de URLs y llamada a Safe Browsing (con HTTP mock):
-
-```
-python -m pytest -q
-```
-
+The user gets a final combined result.
