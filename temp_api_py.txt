@@ -1,4 +1,5 @@
-﻿import os
+# app.py
+import os
 from typing import Optional, Tuple, Dict, Any
 
 from fastapi import FastAPI
@@ -10,13 +11,16 @@ try:
     from src.schemas import AnalyzeRequest, AnalyzeResponse
 except Exception:
     from pydantic import BaseModel
+
     class AnalyzeRequest(BaseModel):
         message: str
         lang: Optional[str] = "es"
+
     class AnalyzeResponse(BaseModel):
         nb: Dict[str, Any]
         llm: Optional[Dict[str, Any]] = None
         final: Dict[str, Any]
+
 
 # ====== Pipeline principal (usa tu inference) ======
 try:
@@ -24,33 +28,39 @@ try:
 except Exception:
     def analyze_message(message: str, lang: Optional[str] = "es") -> Dict[str, Any]:
         low = (message or "").lower()
-        is_phish = any(t in low for t in ["verifica", "suspendida", "click aquÃ­", "urgente", "bank", "contraseÃ±a"])
+        is_phish = any(
+            t in low
+            for t in ["verifica", "suspendida", "click aquí", "urgente", "bank", "contraseña"]
+        )
         return {
             "engine": "nb",
             "label": "phishing" if is_phish else "legit",
             "phishing_score": 0.85 if is_phish else 0.05,
             "is_phishing": is_phish,
             "confidence": "high" if is_phish else "low",
-            "explanation": "Fallback NB demo"
+            "explanation": "Fallback NB demo",
         }
 
-# ====== Tu lÃ³gica de veredicto final (tal cual compartiste) ======
+
+# ====== Tu lógica de veredicto final (tal cual compartiste) ======
 UNCERTAIN_AS_PHISH = os.getenv("DECISION_UNCERTAIN_AS_PHISH", "true").lower() == "true"
 
 PHISH_TOKENS = (
     "phish", "phishing", "sospechoso", "fraude", "estafa",
-    "malicioso", "malicious", "ataque", "engaÃ±o", "scam"
+    "malicioso", "malicious", "ataque", "engaño", "scam"
 )
-SAFE_TOKENS = ("safe", "legit", "legÃ­timo", "legitimo", "no es phishing")
+SAFE_TOKENS = ("safe", "legit", "legítimo", "legitimo", "no es phishing")
+
 
 def _normalize(s: str) -> str:
     return (s or "").strip().lower()
+
 
 def _map_verdict(raw: str, explanation: str) -> str:
     v = _normalize(raw)
     if v in ("phishing", "phish", "es_phishing", "is_phishing", "phishy", "sus", "suspicious"):
         return "phishing"
-    if v in ("safe", "legit", "legÃ­timo", "legitimo", "seguro", "benigno", "benign"):
+    if v in ("safe", "legit", "legítimo", "legitimo", "seguro", "benigno", "benign"):
         return "safe"
     if v in ("uncertain", "unknown", "doubt", "dudoso"):
         return "uncertain"
@@ -65,13 +75,14 @@ def _map_verdict(raw: str, explanation: str) -> str:
         return "safe"
     return "uncertain"
 
+
 def combine_verdict(local: dict, llm: Optional[dict]) -> Tuple[bool, str, str]:
     final_phish = bool(local.get("is_phishing", False))
     explanation, source = "", "local_model"
     if llm and isinstance(llm, dict):
         raw_verdict = (llm.get("verdict") or "")
         llm_expl = (llm.get("explanation") or "").strip()
-        advice   = (llm.get("advice") or "").strip()
+        advice = (llm.get("advice") or "").strip()
         verdict = _map_verdict(raw_verdict, llm_expl)
         if verdict == "phishing":
             final_phish = True
@@ -82,48 +93,53 @@ def combine_verdict(local: dict, llm: Optional[dict]) -> Tuple[bool, str, str]:
         else:
             final_phish = True if UNCERTAIN_AS_PHISH else bool(local.get("is_phishing", False))
             source = "openrouter:uncertain_fallback"
-        explanation = llm_expl + (f"\n\nRecomendaciÃ³n: {advice}" if advice else "")
+        explanation = llm_expl + (f"\n\nRecomendación: {advice}" if advice else "")
         return final_phish, explanation, source
 
     conf = str(local.get("confidence", "")).lower()
     if conf == "medium":
         explanation = (
-            "No estoy completamente seguro: seÃ±ales mixtas. "
+            "No estoy completamente seguro: señales mixtas. "
             "Verifica el mensaje por un canal oficial antes de confiar."
         )
         source = "fallback:no_llm_uncertain"
     elif local.get("is_phishing"):
-        explanation = "Patrones de urgencia/ingenierÃ­a social detectados por el modelo local."
+        explanation = "Patrones de urgencia/ingeniería social detectados por el modelo local."
         source = "fallback:no_llm_phish"
     else:
-        explanation = "El modelo local no encontrÃ³ patrones claros de phishing."
+        explanation = "El modelo local no encontró patrones claros de phishing."
         source = "fallback:no_llm_safe"
     return final_phish, explanation, source
+
 
 # ====== FastAPI app ======
 app = FastAPI(title="TuBot Backend")
 
+# CORS: en producción restringe allow_origins al dominio real
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # en prod pon tu dominio
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"ok": True, "message": "Backend running", "provider": "openrouter"}
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
+
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(req: AnalyzeRequest):
     try:
         nb = analyze_message(req.message, req.lang)
-        llm = None  # integra tu llamada a OpenRouter aquÃ­ si quieres
+        llm = None  # integra tu llamada a OpenRouter aquí si quieres
         final_bool, final_expl, source = combine_verdict(nb, llm)
         final_block = {
             "engine": "fused",
@@ -135,3 +151,4 @@ async def analyze(req: AnalyzeRequest):
         return {"nb": nb, "llm": llm, "final": final_block}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
