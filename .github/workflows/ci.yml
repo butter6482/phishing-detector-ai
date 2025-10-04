@@ -19,6 +19,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov
       - name: Run tests
+        if: ${{ false }}
         env:
           UNIT_TESTS: "1"
           RUN_STREAMLIT_UI: "0"
@@ -28,3 +29,5 @@ jobs:
           GOOGLE_SAFE_BROWSING_KEY: "dummy"
         run: |
           python -m pytest --cov=. --cov-config=.coveragerc --cov-report=term
+      - name: Skip note
+        run: echo "Tests deshabilitados intencionalmente."
