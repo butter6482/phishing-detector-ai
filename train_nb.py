@@ -16,9 +16,9 @@ CANDIDATE_PATHS = [
 
 csv_path = next((p for p in CANDIDATE_PATHS if p.exists()), None)
 if csv_path is None:
-    sys.exit("❌ No se encontró 'spam.csv'. Colócalo en la carpeta del proyecto o en 'data/spam.csv' y vuelve a correr.")
+    sys.exit(" No se encontró 'spam.csv'. Colócalo en la carpeta del proyecto o en 'data/spam.csv' y vuelve a correr.")
 
-print(f"📄 Usando dataset: {csv_path}")
+print(f" Usando dataset: {csv_path}")
 
 # Carga y preprocesado
 df = pd.read_csv(csv_path, encoding="latin-1")[["v1", "v2"]]
@@ -40,10 +40,10 @@ model.fit(X_train_vect, y_train)
 # Métricas rápidas
 y_pred = model.predict(X_test_vect)
 acc = accuracy_score(y_test, y_pred)
-print(f"✅ Precisión: {acc:.3f}")
+print(f" Precisión: {acc:.3f}")
 print(classification_report(y_test, y_pred, digits=3))
 
 # Guardar artefactos
 joblib.dump(model, "modelo_entrenado.pkl")
 joblib.dump(vectorizer, "vectorizer.pkl")
-print("💾 Guardados: modelo_entrenado.pkl, vectorizer.pkl")
+print(" Guardados: modelo_entrenado.pkl, vectorizer.pkl")
