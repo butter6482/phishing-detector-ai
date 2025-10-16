@@ -12,8 +12,8 @@ def load_model():
     global _model, _vec
     if _model is None or _vec is None:
         try:
-            _model = load("backend/models/modelo_entrenado.pkl")
-            _vec = load("backend/models/vectorizer.pkl")
+            _model = load("models/modelo_entrenado.pkl")
+            _vec = load("models/vectorizer.pkl")
         except Exception:
             _model = None
             _vec = None

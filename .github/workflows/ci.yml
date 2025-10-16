@@ -12,22 +12,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r Backend/requirements.txt
           pip install pytest pytest-cov
       - name: Run tests
-        if: ${{ false }}
         env:
-          UNIT_TESTS: "1"
-          RUN_STREAMLIT_UI: "0"
-          USE_OPENROUTER: "true"
-          OPENROUTER_API_KEY: "dummy"
-          OPENAI_API_KEY: "dummy"
-          GOOGLE_SAFE_BROWSING_KEY: "dummy"
+          USE_OPENROUTER: "false"
+          GOOGLE_SAFE_BROWSING_KEY: ""
         run: |
-          python -m pytest --cov=. --cov-config=.coveragerc --cov-report=term
-      - name: Skip note
-        run: echo "Tests deshabilitados intencionalmente."
+          python -m pytest -q

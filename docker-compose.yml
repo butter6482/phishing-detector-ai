@@ -1,46 +1,18 @@
 version: "3.9"
-services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: phishing-backend
-    env_file: ./.env
-    ports:
-      - "8000:8000"
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: "http://localhost:8000"
-    container_name: phishing-frontend
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-version: "3.9"
 
 services:
-  backend:
+  app:
     build:
       context: .
-      dockerfile: Backend/Dockerfile
-    image: phishing-backend
-    container_name: backend_app
+      dockerfile: Dockerfile
+    image: phishing-detector
+    container_name: phishing-detector
     ports:
-      - "8000:8000"
+      - "8080:80"
+    environment:
+      - USE_OPENROUTER=${USE_OPENROUTER:-true}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-3.5-turbo}
+      - GOOGLE_SAFE_BROWSING_KEY=${GOOGLE_SAFE_BROWSING_KEY:-}
     env_file:
       - .env
-
-  frontend:
-    build:
-      context: frontend
-      dockerfile: Dockerfile
-    image: phishing-frontend
-    container_name: frontend_app
-    ports:
-      - "8081:80"
-    depends_on:
-      - backend
