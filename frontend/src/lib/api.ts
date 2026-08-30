@@ -33,6 +33,7 @@ export type FinalBlock = {
   label: "phishing" | "legit" | string;
   explanation: string;
   source: string;
+  llm_error?: string;
 };
 
 export type AnalyzeResp = {

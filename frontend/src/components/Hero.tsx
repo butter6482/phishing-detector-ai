@@ -27,7 +27,7 @@ export function Hero() {
               Try Now
             </button>
             <a
-              href="https://github.com/butter6482"
+              href="https://github.com/butter6482/phishing-detector-ai"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 border border-[var(--color-border)] rounded font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:text-white"

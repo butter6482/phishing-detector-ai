@@ -1,20 +1,28 @@
+import logging
 import re
 import unicodedata
+from pathlib import Path
 from typing import Dict, Any
 
 from joblib import load
 
+logger = logging.getLogger(__name__)
+
+_MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 _model = None
 _vec = None
+_load_attempted = False
 
 
 def load_model():
-    global _model, _vec
-    if _model is None or _vec is None:
+    global _model, _vec, _load_attempted
+    if not _load_attempted and (_model is None or _vec is None):
+        _load_attempted = True
         try:
-            _model = load("backend/models/modelo_entrenado.pkl")
-            _vec = load("backend/models/vectorizer.pkl")
-        except Exception:
+            _model = load(_MODELS_DIR / "modelo_entrenado.pkl")
+            _vec = load(_MODELS_DIR / "vectorizer.pkl")
+        except Exception as e:
+            logger.warning("No se pudo cargar el modelo ML (%s); usando heurística de keywords.", e)
             _model = None
             _vec = None
     return _model, _vec

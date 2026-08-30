@@ -32,12 +32,14 @@ class SafeBrowsingResult(BaseModel):
 
 
 class FinalResult(BaseModel):
+    engine: str = "fused"
     score: int
     risk: Literal["safe", "warning", "phishing"]
     is_phishing: bool
     label: Literal["phishing", "legit"]
     explanation: str
     source: str
+    llm_error: Optional[str] = None
 
 
 class AnalyzeResponse(BaseModel):

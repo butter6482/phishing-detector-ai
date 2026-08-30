@@ -1,11 +1,10 @@
-import os, json, httpx
-from typing import Optional, Dict, Any
+import json
+import os
+from typing import Any, Dict, Optional
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
-USE_OPENROUTER = os.getenv("USE_OPENROUTER", "true").lower() == "true"
+import httpx
 
-HEADERS = {"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"}
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 SYSTEM = (
     "You are a security analyst. Given an email/message, classify it as 'phishing' or 'safe'. "
     "Return strict JSON with fields: verdict ('phishing'|'safe'|'uncertain'), "
@@ -13,22 +12,33 @@ SYSTEM = (
 )
 
 
+def _config() -> tuple[str, str, bool]:
+    key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+    enabled = os.getenv("USE_OPENROUTER", "true").lower() == "true"
+    return key, model, enabled
+
+
 def call_openrouter(message: str, lang: str = "es") -> Optional[Dict[str, Any]]:
-    if not USE_OPENROUTER or not OPENROUTER_API_KEY:
+    key, model, enabled = _config()
+    if not enabled or not key:
         return None
-    prompt = f"Language: {lang}\nMessage:\n{message[:4000]}"
+
     body = {
-        "model": OPENROUTER_MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": f"Language: {lang}\nMessage:\n{message[:4000]}"},
         ],
         "response_format": {"type": "json_object"},
         "temperature": 0.0,
     }
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     try:
         with httpx.Client(timeout=15) as client:
-            r = client.post("https://openrouter.ai/api/v1/chat/completions", headers=HEADERS, json=body)
+            r = client.post(OPENROUTER_URL, headers=headers, json=body)
+            if r.status_code == 429:
+                return {"error": "openrouter_rate_limited"}
             r.raise_for_status()
             content = r.json()["choices"][0]["message"]["content"]
         obj = json.loads(content)

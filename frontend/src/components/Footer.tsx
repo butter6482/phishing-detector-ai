@@ -8,7 +8,7 @@ export function Footer() {
         <p className="text-[var(--color-text)] opacity-70 mb-4 md:mb-0">© Alejandro Butter · Puerto Rico</p>
         <div className="flex space-x-6">
           <a
-            href="https://github.com/butter6482"
+            href="https://github.com/butter6482/phishing-detector-ai"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[var(--color-text)] opacity-70 hover:opacity-100 transition-colors"

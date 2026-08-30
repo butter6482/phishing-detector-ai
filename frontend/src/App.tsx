@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Header } from './components/Header'
 import { Hero } from './components/Hero'
 // import { Features } from './components/Features'
@@ -8,8 +8,24 @@ import { CallToAction } from './components/CallToAction'
 import { Footer } from './components/Footer'
 
 export function App() {
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('theme')
+      if (saved) return saved === 'dark'
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    } catch {
+      return false
+    }
+  })
   const toggleDarkMode = () => setDarkMode((d) => !d)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('theme', darkMode ? 'dark' : 'light')
+    } catch {
+      /* ignore */
+    }
+  }, [darkMode])
 
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen transition-colors duration-300`}>

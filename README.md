@@ -1,46 +1,73 @@
-🛡️ Phishing Detector — AI-powered email risk analyzer
+# 🛡️ Phishing Detector — AI-powered email risk analyzer
 
-https://phishing-detector-ai.onrender.com
+<https://phishing-detector-ai.onrender.com>
 
-Phishing Detector analyzes suspicious emails and provides a clear verdict with AI-generated explanations. It combines a local Naive Bayes classifier, real-time URL validation, and an LLM to deliver simple, trustworthy insights.
+Analiza correos sospechosos y devuelve un veredicto claro con puntuación de riesgo
+(0–100), palabras clave detectadas y una explicación generada por IA. Combina tres
+señales: un clasificador local (Naive Bayes con fallback heurístico), validación de
+URLs con Google Safe Browsing y un LLM vía OpenRouter.
 
-What’s included
+## Arquitectura
 
-🔍 Local ML (Naive Bayes) to classify phishing vs legit.
+| Capa       | Tecnología                                        |
+|------------|---------------------------------------------------|
+| Frontend   | React + Vite + TailwindCSS + TypeScript           |
+| Backend    | FastAPI (Uvicorn) — endpoint `POST /api/analyze`  |
+| ML local   | scikit-learn (`Backend/models/*.pkl`)             |
+| URLs       | Google Safe Browsing API                          |
+| LLM        | OpenRouter                                        |
+| Infra      | Imagen Docker única (nginx + uvicorn + supervisord)|
 
-🧠 AI explanations via OpenRouter (summary + practical advice).
+El flujo (`Backend/src/inference.py`): modelo local → Safe Browsing → LLM → score
+fusionado (`compute_score`) → nivel de riesgo `safe` / `warning` / `phishing`.
 
-🌐 Google Safe Browsing for real-time URL validation.
+## Desarrollo local
 
-📊 Risk score (0–100) with levels safe / warning / phishing.
+Backend:
 
-🎨 Modern React + Tailwind dashboard UI.
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r Backend/requirements.txt
+cp .env.example Backend/.env                         # completa las claves
+cd Backend && uvicorn api:app --reload --port 8000
+```
 
-⚡ FastAPI backend with /api/analyze endpoint.
+Frontend (usa el proxy de Vite hacia `127.0.0.1:8000`):
 
-🐳 Easy deployment with Docker + Render/Vercel.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
+## Docker (producción)
 
-Stack
+```bash
+docker compose up --build
+# app en http://localhost:8080
+```
 
-Frontend: React + Vite + Tailwind
+## Variables de entorno
 
-Backend: FastAPI (Uvicorn)
+Ver `.env.example`. Claves:
 
-ML: scikit-learn (Naive Bayes)
+| Variable                   | Descripción                                             |
+|----------------------------|--------------------------------------------------------|
+| `OPENROUTER_API_KEY`       | Clave de OpenRouter. Sin ella, el LLM se omite.        |
+| `USE_OPENROUTER`           | `true`/`false` para activar el LLM.                    |
+| `GOOGLE_SAFE_BROWSING_KEY` | Clave de Safe Browsing. Sin ella, se omite el chequeo. |
+| `ALLOWED_ORIGINS`          | Orígenes CORS separados por coma.                      |
+| `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` | Límite por IP en `/analyze`. |
 
-LLM: OpenRouter
+## Tests
 
-Infra: Docker + Render
+```bash
+cd Backend && pytest -q
+```
 
-How it works (flow)
+## Reentrenar el modelo
 
-Paste the email content into the analyzer.
-
-The local model calculates score + suspicious keywords.
-
-Google Safe Browsing checks URLs.
-
-The LLM generates a concise explanation with recommendations.
-
-The user gets a final combined result.
+```bash
+pip install -r Backend/scripts/requirements-train.txt
+python Backend/scripts/train_nb.py   # escribe Backend/models/*.pkl
+```

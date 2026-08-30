@@ -25,11 +25,10 @@ export function Header({ darkMode, toggleDarkMode }: Props) {
             </span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
-            <a href="#" className="text-[var(--color-text)] hover:text-primary transition-colors">
-              Docs
-            </a>
             <a
-              href="https://github.com/butter6482"
+              href="https://github.com/butter6482/phishing-detector-ai"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-[var(--color-text)] hover:text-primary transition-colors"
             >
               GitHub
