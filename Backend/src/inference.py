@@ -1,8 +1,12 @@
 import re
 import unicodedata
+from pathlib import Path
 from typing import Dict, Any
 
 from joblib import load
+
+# Resolve relative to this file so loading works regardless of the working directory
+MODEL_DIR = Path(__file__).resolve().parents[1] / "models"
 
 _model = None
 _vec = None
@@ -12,8 +16,8 @@ def load_model():
     global _model, _vec
     if _model is None or _vec is None:
         try:
-            _model = load("backend/models/modelo_entrenado.pkl")
-            _vec = load("backend/models/vectorizer.pkl")
+            _model = load(MODEL_DIR / "modelo_entrenado.pkl")
+            _vec = load(MODEL_DIR / "vectorizer.pkl")
         except Exception:
             _model = None
             _vec = None
